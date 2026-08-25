@@ -20,9 +20,11 @@ app.innerHTML = `
         id="url-input"
         name="url"
         placeholder="https://example.com"
+        aria-describedby="url-error"
       >
 
       <button type="submit">チェックする</button>
+      <p id="url-error" aria-live="polite" hidden></p>
     </form>
   </main>
 `;
@@ -39,12 +41,57 @@ if (urlInput === null) {
   throw new Error("#url-input が見つかりません。");
 }
 
+const urlError = document.querySelector<HTMLParagraphElement>("#url-error");
+
+if (urlError === null) {
+  throw new Error("#url-error が見つかりません。");
+}
+
+const validateUrl = (value: string): string | null => {
+  if (value.trim() === "") {
+    return "URLを入力してください。";
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "httpまたはhttpsのURLを入力してください。";
+    }
+  } catch {
+    return "正しい形式のURLを入力してください。";
+  }
+
+  return null;
+};
+
+const displayError = (message: string | null): void => {
+  if (message === null) {
+    urlError.textContent = "";
+    urlError.hidden = true;
+    urlInput.setAttribute("aria-invalid", "false");
+    return;
+  }
+
+  urlError.textContent = message;
+  urlError.hidden = false;
+  urlInput.setAttribute("aria-invalid", "true");
+};
+
 const handleSubmit = (event: SubmitEvent): void => {
   event.preventDefault();
 
   const inputValue = urlInput.value;
+  const errorMessage = validateUrl(inputValue);
 
-  console.log(inputValue);
+  displayError(errorMessage);
+
+  if (errorMessage !== null) {
+    console.log(errorMessage);
+    return;
+  }
+
+  console.log("入力されたURL:", inputValue);
 };
 
 urlForm.addEventListener("submit", handleSubmit);

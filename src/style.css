@@ -83,6 +83,24 @@ h1 {
   outline: none;
 }
 
+#url-input[aria-invalid="true"] {
+  background: #fff8f7;
+  border-color: #c43d32;
+}
+
+#url-input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgb(196 61 50 / 16%);
+}
+
+#url-error {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: #b52f26;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
 #url-form button {
   min-height: 48px;
   padding: 0 24px;
