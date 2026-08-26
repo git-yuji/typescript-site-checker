@@ -127,6 +127,60 @@ h1 {
   outline-offset: 3px;
 }
 
+.results {
+  margin-top: 40px;
+}
+
+.results h2 {
+  margin: 0 0 16px;
+  font-size: 1.4rem;
+}
+
+.result-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-card {
+  padding: 20px;
+  border-left: 5px solid;
+  border-radius: 10px;
+}
+
+.result-card h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.result-card p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+}
+
+.result-card span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.result-card--pass {
+  color: #176b4d;
+  background: #edf8f2;
+}
+
+.result-card--warning {
+  color: #8a5a00;
+  background: #fff8df;
+}
+
+.result-card--error {
+  color: #b52f26;
+  background: #fff0ee;
+}
+
 @media (max-width: 560px) {
   body {
     padding: 24px 16px;
