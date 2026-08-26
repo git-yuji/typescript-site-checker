@@ -42,7 +42,7 @@ h1 {
   line-height: 1.2;
 }
 
-.app > p:not(.eyebrow) {
+.app>p:not(.eyebrow) {
   margin: 0;
   color: #65736c;
   line-height: 1.7;
@@ -125,6 +125,12 @@ h1 {
 #url-form button:focus-visible {
   outline: 3px solid rgb(23 107 77 / 28%);
   outline-offset: 3px;
+}
+
+#url-form button:disabled {
+  background: #759187;
+  cursor: wait;
+  transform: none;
 }
 
 .results {
