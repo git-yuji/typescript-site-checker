@@ -8,23 +8,92 @@ type CheckResult = {
   status: CheckStatus;
 };
 
-const sampleResults: CheckResult[] = [
-  {
+const sampleHtml = `
+  <!doctype html>
+  <html lang="ja">
+    <head>
+      <title>サンプルサイト</title>
+      <meta name="description" content="サンプルサイトの説明です。">
+    </head>
+    <body>
+      <h1>サンプルサイト</h1>
+    </body>
+  </html>
+`;
+
+const sampleDocument = new DOMParser().parseFromString(sampleHtml, "text/html");
+
+const checkTitle = (htmlDocument: Document): CheckResult => {
+  const title = htmlDocument.querySelector("title")?.textContent?.trim();
+
+  if (!title) {
+    return {
+      title: "ページタイトル",
+      message: "titleが設定されていません。",
+      status: "error",
+    };
+  }
+
+  return {
     title: "ページタイトル",
-    message: "titleが設定されています。",
+    message: `titleが設定されています: ${title}`,
     status: "pass",
-  },
-  {
+  };
+};
+
+const checkDescription = (htmlDocument: Document): CheckResult => {
+  const description = htmlDocument
+    .querySelector<HTMLMetaElement>('meta[name="description"]')
+    ?.content.trim();
+
+  if (!description) {
+    return {
+      title: "メタディスクリプション",
+      message: "descriptionが設定されていません。",
+      status: "warning",
+    };
+  }
+
+  return {
     title: "メタディスクリプション",
-    message: "descriptionが設定されていません。",
-    status: "warning",
-  },
-  {
+    message: `descriptionが設定されています: ${description}`,
+    status: "pass",
+  };
+};
+
+const checkH1 = (htmlDocument: Document): CheckResult => {
+  const h1Count = htmlDocument.querySelectorAll("h1").length;
+
+  if (h1Count === 0) {
+    return {
+      title: "見出し",
+      message: "h1が設定されていません。",
+      status: "error",
+    };
+  }
+
+  if (h1Count > 1) {
+    return {
+      title: "見出し",
+      message: `h1が${h1Count}個あります。`,
+      status: "error",
+    };
+  }
+
+  return {
     title: "見出し",
-    message: "h1が複数あります。",
-    status: "error",
-  },
+    message: "h1が1個設定されています。",
+    status: "pass",
+  };
+};
+
+const runChecks = (htmlDocument: Document): CheckResult[] => [
+  checkTitle(htmlDocument),
+  checkDescription(htmlDocument),
+  checkH1(htmlDocument),
 ];
+
+const sampleResults = runChecks(sampleDocument);
 
 const resultListHtml = sampleResults
   .map(
