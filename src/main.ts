@@ -8,6 +8,14 @@ type CheckResult = {
   status: CheckStatus;
 };
 
+type FetchSiteResponse =
+  | {
+      html: string;
+    }
+  | {
+      error: string;
+    };
+
 const sampleHtml = `
   <!doctype html>
   <html lang="ja">
@@ -95,18 +103,6 @@ const runChecks = (htmlDocument: Document): CheckResult[] => [
 
 const sampleResults = runChecks(sampleDocument);
 
-const resultListHtml = sampleResults
-  .map(
-    (result) => `
-      <li class="result-card result-card--${result.status}">
-        <h3>${result.title}</h3>
-        <p>${result.message}</p>
-        <span>${result.status}</span>
-      </li>
-    `,
-  )
-  .join("");
-
 const app = document.querySelector<HTMLDivElement>("#app");
 
 if (app === null) {
@@ -130,15 +126,13 @@ app.innerHTML = `
         aria-describedby="url-error"
       >
 
-      <button type="submit">チェックする</button>
+      <button type="submit" id="check-button">チェックする</button>
       <p id="url-error" aria-live="polite" hidden></p>
     </form>
 
     <section class="results" aria-labelledby="results-heading">
       <h2 id="results-heading">診断結果</h2>
-      <ul class="result-list">
-        ${resultListHtml}
-      </ul>
+      <ul id="result-list" class="result-list"></ul>
     </section>
   </main>
 `;
@@ -179,6 +173,39 @@ const validateUrl = (value: string): string | null => {
   return null;
 };
 
+const resultList = document.querySelector<HTMLUListElement>("#result-list");
+
+if (resultList === null) {
+  throw new Error("#result-list が見つかりません。");
+}
+
+const checkButton = document.querySelector<HTMLButtonElement>("#check-button");
+if (checkButton === null) {
+  throw new Error("#check-button が見つかりません。");
+}
+
+const fetchSiteHtml = async (url: string): Promise<string> => {
+  const response = await fetch("/api/fetch-site", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ url }),
+  });
+
+  const data = (await response.json()) as FetchSiteResponse;
+
+  if ("error" in data) {
+    throw new Error(data.error);
+  }
+
+  if (!response.ok) {
+    throw new Error("HTMLを取得できませんでした。");
+  }
+
+  return data.html;
+};
+
 const displayError = (message: string | null): void => {
   if (message === null) {
     urlError.textContent = "";
@@ -192,7 +219,36 @@ const displayError = (message: string | null): void => {
   urlInput.setAttribute("aria-invalid", "true");
 };
 
-const handleSubmit = (event: SubmitEvent): void => {
+const setLoading = (isLoading: boolean): void => {
+  checkButton.disabled = isLoading;
+  checkButton.textContent = isLoading ? "チェック中..." : "チェックする";
+
+  urlForm.setAttribute("aria-busy", String(isLoading));
+};
+
+const createResultCard = (result: CheckResult): HTMLLIElement => {
+  const card = document.createElement("li");
+  const title = document.createElement("h3");
+  const message = document.createElement("p");
+  const status = document.createElement("span");
+
+  card.className = `result-card result-card--${result.status}`;
+  title.textContent = result.title;
+  message.textContent = result.message;
+  status.textContent = result.status;
+
+  card.append(title, message, status);
+  return card;
+};
+
+const displayResults = (results: CheckResult[]): void => {
+  const cards = results.map(createResultCard);
+  resultList.replaceChildren(...cards);
+};
+
+displayResults(sampleResults);
+
+const handleSubmit = async (event: SubmitEvent): Promise<void> => {
   event.preventDefault();
 
   const inputValue = urlInput.value;
@@ -201,11 +257,25 @@ const handleSubmit = (event: SubmitEvent): void => {
   displayError(errorMessage);
 
   if (errorMessage !== null) {
-    console.log(errorMessage);
     return;
   }
 
-  console.log("入力されたURL:", inputValue);
+  setLoading(true);
+
+  try {
+    const html = await fetchSiteHtml(inputValue.trim());
+    const htmlDocument = new DOMParser().parseFromString(html, "text/html");
+
+    const results = runChecks(htmlDocument);
+    displayResults(results);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "HTMLを取得できませんでした。";
+
+    displayError(message);
+  } finally {
+    setLoading(false);
+  }
 };
 
 urlForm.addEventListener("submit", handleSubmit);
