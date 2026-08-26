@@ -1,5 +1,43 @@
 import "./style.css";
 
+type CheckStatus = "pass" | "warning" | "error";
+
+type CheckResult = {
+  title: string;
+  message: string;
+  status: CheckStatus;
+};
+
+const sampleResults: CheckResult[] = [
+  {
+    title: "ページタイトル",
+    message: "titleが設定されています。",
+    status: "pass",
+  },
+  {
+    title: "メタディスクリプション",
+    message: "descriptionが設定されていません。",
+    status: "warning",
+  },
+  {
+    title: "見出し",
+    message: "h1が複数あります。",
+    status: "error",
+  },
+];
+
+const resultListHtml = sampleResults
+  .map(
+    (result) => `
+      <li class="result-card result-card--${result.status}">
+        <h3>${result.title}</h3>
+        <p>${result.message}</p>
+        <span>${result.status}</span>
+      </li>
+    `,
+  )
+  .join("");
+
 const app = document.querySelector<HTMLDivElement>("#app");
 
 if (app === null) {
@@ -26,6 +64,13 @@ app.innerHTML = `
       <button type="submit">チェックする</button>
       <p id="url-error" aria-live="polite" hidden></p>
     </form>
+
+    <section class="results" aria-labelledby="results-heading">
+      <h2 id="results-heading">診断結果</h2>
+      <ul class="result-list">
+        ${resultListHtml}
+      </ul>
+    </section>
   </main>
 `;
 
