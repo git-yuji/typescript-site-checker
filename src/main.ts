@@ -8,6 +8,8 @@ type CheckResult = {
   status: CheckStatus;
 };
 
+type ResultCounts = Record<CheckStatus, number>;
+
 type FetchSiteResponse =
   | {
       html: string;
@@ -273,6 +275,12 @@ app.innerHTML = `
 
     <section class="results" aria-labelledby="results-heading">
       <h2 id="results-heading">診断結果</h2>
+      <div
+        id="result-summary"
+        class="result-summary"
+        aria-live="polite"
+        tabindex="-1"
+      ></div>
       <ul id="result-list" class="result-list"></ul>
     </section>
   </main>
@@ -320,10 +328,18 @@ if (resultList === null) {
   throw new Error("#result-list が見つかりません。");
 }
 
+const resultSummary = document.querySelector<HTMLDivElement>("#result-summary");
+
+if (resultSummary === null) {
+  throw new Error("#result-summary が見つかりません。");
+}
+
 const checkButton = document.querySelector<HTMLButtonElement>("#check-button");
 if (checkButton === null) {
   throw new Error("#check-button が見つかりません。");
 }
+
+let hasCompletedChecks = false;
 
 const fetchSiteHtml = async (url: string): Promise<string> => {
   const response = await fetch("/api/fetch-site", {
@@ -362,9 +378,14 @@ const displayError = (message: string | null): void => {
 
 const setLoading = (isLoading: boolean): void => {
   checkButton.disabled = isLoading;
-  checkButton.textContent = isLoading ? "チェック中..." : "チェックする";
-
   urlForm.setAttribute("aria-busy", String(isLoading));
+
+  if (isLoading) {
+    checkButton.textContent = "チェック中...";
+    return;
+  }
+
+  checkButton.textContent = hasCompletedChecks ? "再チェック" : "チェックする";
 };
 
 const createResultCard = (result: CheckResult): HTMLLIElement => {
@@ -382,8 +403,46 @@ const createResultCard = (result: CheckResult): HTMLLIElement => {
   return card;
 };
 
+const statusPriority: Record<CheckStatus, number> = {
+  error: 0,
+  warning: 1,
+  pass: 2,
+};
+
+const sortResults = (results: CheckResult[]): CheckResult[] => {
+  return [...results].sort(
+    (firstResult, secondResult) =>
+      statusPriority[firstResult.status] - statusPriority[secondResult.status],
+  );
+};
+
+const countResults = (results: CheckResult[]): ResultCounts => {
+  return results.reduce<ResultCounts>(
+    (counts, result) => {
+      counts[result.status] += 1;
+      return counts;
+    },
+    {
+      pass: 0,
+      warning: 0,
+      error: 0,
+    },
+  );
+};
+
+const displaySummary = (counts: ResultCounts): void => {
+  resultSummary.textContent =
+    `エラー ${counts.error}件・` +
+    `警告 ${counts.warning}件・` +
+    `合格 ${counts.pass}件`;
+};
+
 const displayResults = (results: CheckResult[]): void => {
-  const cards = results.map(createResultCard);
+  const counts = countResults(results);
+  const sortedResults = sortResults(results);
+  const cards = sortedResults.map(createResultCard);
+
+  displaySummary(counts);
   resultList.replaceChildren(...cards);
 };
 
@@ -409,6 +468,9 @@ const handleSubmit = async (event: SubmitEvent): Promise<void> => {
 
     const results = runChecks(htmlDocument);
     displayResults(results);
+    resultSummary.focus();
+
+    hasCompletedChecks = true;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "HTMLを取得できませんでした。";
