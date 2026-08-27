@@ -95,10 +95,151 @@ const checkH1 = (htmlDocument: Document): CheckResult => {
   };
 };
 
+const checkOgp = (htmlDocument: Document): CheckResult => {
+  const ogpProperties = [
+    "og:title",
+    "og:type",
+    "og:image",
+    "og:url",
+    "og:description",
+  ];
+
+  const missingProperties = ogpProperties.filter((property) => {
+    const content = htmlDocument
+      .querySelector<HTMLMetaElement>(`meta[property="${property}"]`)
+      ?.content.trim();
+
+    return !content;
+  });
+
+  if (missingProperties.length > 0) {
+    return {
+      title: "OGP",
+      message: `未設定のOGPがあります: ${missingProperties.join(", ")}`,
+      status: "warning",
+    };
+  }
+
+  return {
+    title: "OGP",
+    message: "主要なOGPが設定されています。",
+    status: "pass",
+  };
+};
+
+const checkCanonical = (htmlDocument: Document): CheckResult => {
+  const canonicalUrl = htmlDocument
+    .querySelector<HTMLLinkElement>(`link[rel="canonical"]`)
+    ?.getAttribute("href")
+    ?.trim();
+
+  if (!canonicalUrl) {
+    return {
+      title: "canonical URL",
+      message: "canonical URLが設定されていません。",
+      status: "warning",
+    };
+  }
+
+  return {
+    title: "canonical URL",
+    message: `canonical URLが設定されています: ${canonicalUrl}`,
+    status: "pass",
+  };
+};
+
+const checkFavicon = (htmlDocument: Document): CheckResult => {
+  const faviconUrl = htmlDocument
+    .querySelector<HTMLLinkElement>(`link[rel~="icon"]`)
+    ?.getAttribute("href")
+    ?.trim();
+
+  if (!faviconUrl) {
+    return {
+      title: "favicon",
+      message: "faviconが設定されていません。",
+      status: "warning",
+    };
+  }
+
+  return {
+    title: "favicon",
+    message: `faviconが設定されています: ${faviconUrl}`,
+    status: "pass",
+  };
+};
+
+const checkRobots = (htmlDocument: Document): CheckResult => {
+  const robotsContent = htmlDocument
+    .querySelector<HTMLMetaElement>(`meta[name="robots"]`)
+    ?.content.trim()
+    .toLowerCase();
+
+  if (!robotsContent) {
+    return {
+      title: "robots",
+      message: "robots設定がありません。",
+      status: "warning",
+    };
+  }
+
+  const directives = robotsContent.split(/[,\s]+/);
+  const blockedDirectives = directives.filter(
+    (directive) => directive === "noindex" || directive === "nofollow",
+  );
+
+  if (blockedDirectives.length > 0) {
+    return {
+      title: "robots",
+      message: `公開を制限する設定があります: ${blockedDirectives.join(", ")}`,
+      status: "error",
+    };
+  }
+
+  return {
+    title: "robots",
+    message: `robotsが設定されています: ${robotsContent}`,
+    status: "pass",
+  };
+};
+
+const checkImageAlt = (htmlDocument: Document): CheckResult => {
+  const imageCount = htmlDocument.querySelectorAll("img").length;
+  const missingAltCount =
+    htmlDocument.querySelectorAll("img:not([alt])").length;
+
+  if (imageCount === 0) {
+    return {
+      title: "画像のalt属性",
+      message: "画像はありません。",
+      status: "pass",
+    };
+  }
+
+  if (missingAltCount > 0) {
+    return {
+      title: "画像のalt属性",
+      message: `${imageCount}枚中${missingAltCount}枚にalt属性がありません。`,
+      status: "error",
+    };
+  }
+
+  return {
+    title: "画像のalt属性",
+    message: `${imageCount}枚すべてにalt属性があります。`,
+    status: "pass",
+  };
+};
+
 const runChecks = (htmlDocument: Document): CheckResult[] => [
   checkTitle(htmlDocument),
   checkDescription(htmlDocument),
   checkH1(htmlDocument),
+  checkOgp(htmlDocument),
+  checkCanonical(htmlDocument),
+  checkFavicon(htmlDocument),
+  checkRobots(htmlDocument),
+  checkImageAlt(htmlDocument),
 ];
 
 const sampleResults = runChecks(sampleDocument);
